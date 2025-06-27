@@ -1,0 +1,67 @@
+---
+title: "Race and income"
+execute: 
+  echo: false
+  warning: false
+---
+
+```{r}
+#| message: false
+
+library(tidyverse)
+library(scales)
+
+nyc_tracts <- read_csv("https://raw.githubusercontent.com/PPBDS/primer.data/master/data-raw/nyc_tracts.csv", show_col_types = FALSE)
+```
+
+
+```{r}
+# Read data
+nyc_tracts <- read_csv(
+  "https://raw.githubusercontent.com/PPBDS/primer.data/master/data-raw/nyc_tracts.csv",
+  show_col_types = FALSE
+)
+
+# Extract correct county from `tract` field
+nyc_tracts <- nyc_tracts %>%
+  mutate(
+    county = str_extract(tract, "(?<=;\\s)[^;]+(?=\\sCounty)"),
+    borough = case_when(
+      county == "Bronx" ~ "Bronx",
+      county == "Kings" ~ "Brooklyn",
+      county == "New York" ~ "Manhattan",
+      county == "Queens" ~ "Queens",
+      county == "Richmond" ~ "Staten Island",
+      TRUE ~ "Other"
+    )
+  )
+
+# Use 'race' column as largest racial group
+nyc_tracts <- nyc_tracts %>%
+  mutate(
+    largest_group = factor(race, levels = c("White", "Hispanic", "Black", "Asian")),
+    borough = factor(borough, levels = c("Bronx", "Brooklyn", "Manhattan", "Queens", "Staten Island"))
+  )
+
+# Plot
+p <- ggplot(nyc_tracts, aes(x = med_income, y = largest_group, color = med_income)) +
+  geom_jitter(width = 0, height = 0.2, alpha = 0.7, size = 2) +
+  facet_wrap(~ borough, ncol = 1) +
+  scale_x_continuous(labels = dollar_format()) +
+  scale_color_viridis_c(option = "plasma", end = 0.9) +
+  labs(
+    title = "Race and Income Across Census Tracts in New York City",
+    x = "Median household income",
+    y = "Largest group in Census tract",
+    color = "Income"
+  ) +
+  theme_minimal(base_family = "Arial") +
+  theme(
+    strip.text = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+    legend.position = "right"
+  )
+
+# no ggsave — just let Quarto embed it
+p
+```
